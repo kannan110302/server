@@ -192,10 +192,15 @@ app.get('/api/users/:id', async (req, res) => {
 // Add a new user
 app.post('/api/users', async (req, res) => {
   try {
-    const { registrationDate, ...rest } = req.body;
-    const formattedDate = moment.utc(registrationDate, 'YYYY-MM-DD').toDate();
+    const { registrationDate, image, ...rest } = req.body;
 
-    const newUser = new User({ ...rest, registrationDate: formattedDate });
+    // Validate if image is not too large or has the correct format
+    if (!image || !image.startsWith('data:image/')) {
+      return res.status(400).json({ message: 'Invalid image format' });
+    }
+
+    const formattedDate = moment.utc(registrationDate, 'YYYY-MM-DD').toDate();
+    const newUser = new User({ ...rest, image, registrationDate: formattedDate });
     await newUser.save();
     res.status(201).json(newUser);
   } catch (error) {
@@ -206,13 +211,15 @@ app.post('/api/users', async (req, res) => {
 // Update user by ID
 app.put('/api/users/:id', async (req, res) => {
   try {
-    const { registrationDate, ...rest } = req.body;
-    const formattedDate = registrationDate ? moment.utc(registrationDate, 'YYYY-MM-DD').toDate() : undefined;
+    const { registrationDate, image, ...rest } = req.body;
 
-    const updatedUserData = {
-      ...rest,
-      registrationDate: formattedDate,
-    };
+    // Optional image update: check if image exists and is in the correct format
+    if (image && !image.startsWith('data:image/')) {
+      return res.status(400).json({ message: 'Invalid image format' });
+    }
+
+    const formattedDate = registrationDate ? moment.utc(registrationDate, 'YYYY-MM-DD').toDate() : undefined;
+    const updatedUserData = { ...rest, registrationDate: formattedDate, image };
 
     const updatedUser = await User.findByIdAndUpdate(req.params.id, updatedUserData, { new: true });
     if (!updatedUser) {
